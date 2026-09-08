@@ -93,7 +93,6 @@
               <div class="spell-check">
                 <div class="spell-label">拼写检查（可选，验证是否真正记住）</div>
                 <input
-                  ref="spellInput"
                   v-model="spellInput"
                   class="spell-input"
                   placeholder="输入单词拼写"
@@ -246,7 +245,6 @@
             <button class="btn btn-danger" @click="doReset">重置全部进度</button>
           </div>
           <textarea
-            ref="importArea"
             v-if="showImport"
             class="import-area"
             placeholder="粘贴导出的 JSON 内容…"
@@ -485,7 +483,7 @@ export default {
     function reveal() {
       revealed.value = true;
       nextTick(() => {
-        if (spellInput && currentWord.value) {
+        if (currentWord.value) {
           const el = document.querySelector(".spell-input");
           if (el) el.focus();
         }
