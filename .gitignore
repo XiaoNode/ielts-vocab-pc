@@ -1,0 +1,19 @@
+# 依赖
+node_modules/
+
+# 构建产物（由 CI 或本地 build 生成，不入库）
+dist/
+
+# 原始数据（大文件，可重新下载/生成）
+scripts/download/*.csv
+scripts/download/*.bz2
+scripts/download/*.tsv
+
+# 词库 JSON 由 generate-lexicon.py 生成，但为可复现仍入库（见下）
+# public/data/lexicon.json 保留入库
+# 音频保留入库（离线发音是核心功能，决定入库）
+
+# 系统
+.DS_Store
+Thumbs.db
+*.log

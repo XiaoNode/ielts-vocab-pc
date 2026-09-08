@@ -1,0 +1,26 @@
+{
+  "name": "ielts-vocab-pc",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-first IELTS vocabulary learning application",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "generate:lexicon": "python scripts/generate-lexicon.py",
+    "generate:audio": "python scripts/generate-audio.py",
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "vue": "^3.5.42"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.8",
+    "vite": "^8.2.2",
+    "vite-plugin-singlefile": "^2.3.3"
+  }
+}
