@@ -5,6 +5,7 @@
 //            lastResultDay: 上次答对日期 }
 
 const STORAGE_KEY = "ielts-vocab-progress-v1";
+const FAVORITES_KEY = "ielts-vocab-favorites-v1";
 
 const DAY_MS = 24 * 3600 * 1000;
 
@@ -133,4 +134,45 @@ export function importProgress(jsonStr) {
   return data.words;
 }
 
-export default { loadProgress, saveProgress, applyResult, computeStats, exportProgress, importProgress, INTERVALS, todayStr };
+// ---- 收藏（favorites）----
+// 收藏列表以 word 字符串为 key 存独立 localStorage，跨词库互通。
+
+export function loadFavorites() {
+  try {
+    const raw = localStorage.getItem(FAVORITES_KEY);
+    if (!raw) return [];
+    const data = JSON.parse(raw);
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data.words)) return data.words;
+    return [];
+  } catch (e) {
+    console.warn("loadFavorites failed", e);
+    return [];
+  }
+}
+
+export function saveFavorites(words) {
+  try {
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify({ words, savedAt: Date.now() }));
+  } catch (e) {
+    console.error("saveFavorites failed", e);
+  }
+}
+
+/** 判断是否已收藏 */
+export function isFavorite(words, word) {
+  return words.includes(word);
+}
+
+/** 切换收藏状态，返回新的收藏列表 */
+export function toggleFavorite(words, word) {
+  const i = words.indexOf(word);
+  if (i >= 0) {
+    words.splice(i, 1);
+  } else {
+    words.push(word);
+  }
+  return words;
+}
+
+export default { loadProgress, saveProgress, applyResult, computeStats, exportProgress, importProgress, loadFavorites, saveFavorites, isFavorite, toggleFavorite, INTERVALS, todayStr };

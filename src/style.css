@@ -83,6 +83,93 @@ body {
   color: #9ca3af;
 }
 
+/* ===== 词库切换器 ===== */
+.lib-switch {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lib-label {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.lib-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.lib-tab {
+  flex: 1;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: transparent;
+  color: #d1d5db;
+  border-radius: 8px;
+  padding: 7px 0;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s;
+}
+
+.lib-tab:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.lib-tab.on {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+.lib-badge {
+  display: inline-block;
+  background: #eef2ff;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 1px 10px;
+  border-radius: 20px;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+
+/* ===== 收藏星标 ===== */
+.btn-fav {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  color: #c0c4cc;
+  align-self: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.btn-fav:hover {
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+.btn-fav.on {
+  color: #f59e0b;
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+
+.wc-fav {
+  color: #f59e0b;
+  margin-left: 4px;
+  font-size: 13px;
+}
+
 .nav {
   flex: 1;
   padding: 12px 10px;

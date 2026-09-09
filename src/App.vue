@@ -9,6 +9,19 @@
         </div>
       </div>
 
+      <div class="lib-switch">
+        <div class="lib-label">词库</div>
+        <div class="lib-tabs">
+          <button
+            v-for="lib in libraries"
+            :key="lib.key"
+            class="lib-tab"
+            :class="{ on: currentLib === lib.key }"
+            @click="switchLibrary(lib.key)"
+          >{{ lib.name }}</button>
+        </div>
+      </div>
+
       <nav class="nav">
         <button class="nav-item" :class="{ active: view === 'learn' }" @click="go('learn')">
           <span class="nav-ic">▶</span> 今日学习
@@ -40,7 +53,7 @@
       <section v-if="view === 'learn'" class="view learn-view">
         <div class="topbar">
           <button class="menu-btn" @click="sidebarOpen = !sidebarOpen">☰</button>
-          <h1>今日学习</h1>
+          <h1>今日学习 <span class="lib-badge">{{ libName }}</span></h1>
           <div class="topbar-right">
             <span class="accent-switch">
               <button :class="{ on: accent === 'us' }" @click="setAccent('us')">🇺🇸 美式</button>
@@ -63,6 +76,9 @@
           <div class="card">
             <div class="word-head">
               <div class="word">{{ currentWord.word }}</div>
+              <button class="btn-fav" :class="{ on: isFav(currentWord.word) }" @click="toggleFav(currentWord.word)">
+                {{ isFav(currentWord.word) ? '★' : '☆' }}
+              </button>
               <div class="phonetic">{{ currentWord.phonetic }}</div>
               <div class="speak-btns">
                 <button class="btn-speak" @click="playWord('us')">🔊 美</button>
@@ -175,7 +191,10 @@
             :class="'mark-' + (progress[w.word]?.mark || 'none')"
             @click="openWordDetail(w)"
           >
-            <div class="wc-word">{{ w.word }}</div>
+            <div class="wc-word">
+              {{ w.word }}
+              <span v-if="isFav(w.word)" class="wc-fav">★</span>
+            </div>
             <div class="wc-phon">{{ w.phonetic }}</div>
             <div class="wc-trans">{{ shortTrans(w.translation) }}</div>
           </div>
@@ -268,6 +287,9 @@
           <button class="modal-close" @click="detailWord = null">✕</button>
           <div class="word-head">
             <div class="word">{{ detailWord.word }}</div>
+            <button class="btn-fav" :class="{ on: isFav(detailWord.word) }" @click="toggleFav(detailWord.word)">
+              {{ isFav(detailWord.word) ? '★' : '☆' }}
+            </button>
             <div class="phonetic">{{ detailWord.phonetic }}</div>
             <div class="speak-btns">
               <button class="btn-speak" @click="playWord('us', detailWord.word)">🔊 美</button>
@@ -311,6 +333,7 @@ import lexiconBundle from "./lexicon-data.js";
 import {
   loadProgress, saveProgress, applyResult, computeStats,
   exportProgress, importProgress, todayStr,
+  loadFavorites, saveFavorites, isFavorite, toggleFavorite,
 } from "./store.js";
 
 const SESSION_SIZE = 10;
@@ -328,6 +351,14 @@ export default {
     const lexiconMeta = ref(null);
     const loaded = ref(false);
     const progress = ref({});
+
+    // ---- 词库与收藏 ----
+    // allLexicon：全部词（单 bundle）；currentLib：当前选中库 key；lexicon 为当前库过滤结果
+    const allLexicon = ref([]);
+    const currentLib = ref(localStorage.getItem("ielts-lib") || "zk");
+    const favorites = ref(loadFavorites());
+    const libraries = ref([]); // [{key,name,count}]
+    const LIB_KEY = { zk: "中考", gk: "高考", ielts: "雅思" };
 
     // ---- 学习会话状态 ----
     const sessionQueue = ref([]);
@@ -350,6 +381,7 @@ export default {
 
     const markFilters = [
       { key: "all", label: "全部" },
+      { key: "fav", label: "⭐ 收藏" },
       { key: "zhan", label: "斩" },
       { key: "shi", label: "识" },
       { key: "hu", label: "糊" },
@@ -358,11 +390,33 @@ export default {
 
     // ---- 计算属性 ----
     const stats = computed(() => {
-      const s = computeStats(progress.value);
-      // total 口径修正：显示词库总量（而非仅有学习记录的词数）
-      s.total = lexicon.value.length;
-      s.newCount = s.total - s.learning - s.mastered;
-      return s;
+      // 基于当前库词列表统计（进度按 word 互通，跨库共享）
+      let mastered = 0, learning = 0, verified = 0, seen = 0;
+      const markCount = { zhan: 0, shi: 0, hu: 0, none: 0 };
+      for (const w of lexicon.value) {
+        const rec = progress.value[w.word];
+        if (!rec) {
+          markCount.none++;
+          continue;
+        }
+        seen++;
+        if (rec.status === "mastered") mastered++;
+        else if (rec.status === "learning") learning++;
+        if (rec.verified) verified++;
+        if (rec.mark === "zhan") markCount.zhan++;
+        else if (rec.mark === "shi") markCount.shi++;
+        else if (rec.mark === "hu") markCount.hu++;
+        else markCount.none++;
+      }
+      const total = lexicon.value.length;
+      return {
+        total,
+        learning,
+        mastered,
+        verified,
+        newCount: total - seen,
+        markCount,
+      };
     });
     const todayLearned = computed(() => {
       const day = todayStr();
@@ -385,6 +439,7 @@ export default {
     });
     const dueCount = computed(() => dueWords.value.length);
     const currentWord = computed(() => sessionQueue.value[sessionIndex.value] || null);
+    const libName = computed(() => LIB_KEY[currentLib.value] || "词库");
     const sessionProgress = computed(() => {
       if (!sessionQueue.value.length) return 0;
       return Math.round((sessionIndex.value / sessionQueue.value.length) * 100);
@@ -393,7 +448,9 @@ export default {
     const detailTokens = computed(() => tokenize(detailWord.value?.example || ""));
     const filteredWords = computed(() => {
       let list = lexicon.value;
-      if (activeMarkFilter.value !== "all") {
+      if (activeMarkFilter.value === "fav") {
+        list = list.filter((w) => isFavorite(favorites.value, w.word));
+      } else if (activeMarkFilter.value !== "all") {
         list = list.filter((w) => (progress.value[w.word]?.mark || "none") === activeMarkFilter.value);
       }
       if (searchQuery.value.trim()) {
@@ -442,17 +499,46 @@ export default {
       try {
         // 词库已内联进 JS（lexicon-data.js），无需 fetch，file:// 双击直开也能用
         const data = lexiconBundle;
-        lexicon.value = data.words || [];
+        allLexicon.value = data.words || [];
         lexiconMeta.value = data.manifest || null;
+        // 从 manifest 读取库列表
+        if (data.manifest && data.manifest.libraries) {
+          libraries.value = Object.values(data.manifest.libraries);
+        } else {
+          libraries.value = [{ key: "ielts", name: "雅思", count: allLexicon.value.length }];
+        }
+        // 校验 currentLib 是否合法
+        if (!libraries.value.some((l) => l.key === currentLib.value)) {
+          currentLib.value = data.manifest?.default_library || libraries.value[0]?.key || "ielts";
+        }
+        applyLibrary();
         progress.value = loadProgress();
         loaded.value = true;
       } catch (e) {
         console.error("loadLexicon failed", e);
-        // 降级：空词库
+        allLexicon.value = [];
         lexicon.value = [];
         lexiconMeta.value = null;
+        libraries.value = [];
         loaded.value = true;
       }
+    }
+
+    function applyLibrary() {
+      const lib = currentLib.value;
+      lexicon.value = allLexicon.value.filter((w) => (w.libs || []).includes(lib));
+    }
+
+    function switchLibrary(lib) {
+      if (lib === currentLib.value) return;
+      currentLib.value = lib;
+      localStorage.setItem("ielts-lib", lib);
+      applyLibrary();
+      // 切库后重置浏览筛选，并重新开始学习会话
+      searchQuery.value = "";
+      activeMarkFilter.value = "all";
+      startNewSession();
+      detailWord.value = null;
     }
 
     // ---- 学习会话 ----
@@ -544,6 +630,22 @@ export default {
       detailWord.value = { ...w, rec: progress.value[w.word] };
     }
 
+    // ---- 收藏 ----
+    function toggleFav(word) {
+      toggleFavorite(favorites.value, word);
+      saveFavorites(favorites.value);
+      // 若详情弹窗正显示该词，同步刷新
+      if (detailWord.value && detailWord.value.word === word) {
+        detailWord.value = { ...detailWord.value };
+      }
+    }
+    function favLabel(word) {
+      return isFavorite(favorites.value, word) ? "★ 已收藏" : "☆ 收藏";
+    }
+    function isFav(word) {
+      return isFavorite(favorites.value, word);
+    }
+
     // ---- 例句 token 交互 ----
     function showTokenTip(tok, event) {
       if (!tok.clean) {
@@ -565,7 +667,7 @@ export default {
     }
     function lookupToken(tok) {
       if (!tok.clean) return;
-      const found = lexicon.value.find((w) => w.word.toLowerCase() === tok.clean);
+      const found = allLexicon.value.find((w) => w.word.toLowerCase() === tok.clean);
       if (found) {
         detailWord.value = { ...found, rec: progress.value[found.word] || null };
         tokenTip.value = null;
@@ -668,6 +770,7 @@ export default {
     return {
       view, sidebarOpen, accent, dailyTarget,
       lexicon, lexiconMeta, loaded, progress,
+      allLexicon, currentLib, favorites, libraries,
       sessionQueue, sessionIndex, sessionNew, revealed,
       spellInput, spellResult, spellOk,
       searchQuery, activeMarkFilter, detailWord, tokenTip, tipStyle,
@@ -677,6 +780,7 @@ export default {
       exampleTokens, detailTokens, filteredWords,
       go, startNewSession, reveal, playWord, checkSpell, mark,
       openWordDetail, openReview, markWordInDetail,
+      toggleFav, favLabel, switchLibrary, isFav, libName,
       showTokenTip, hideTokenTip, playToken, lookupToken,
       filterBrowse, setMarkFilter, setAccent,
       doExport, doImport, confirmImport, doReset,
