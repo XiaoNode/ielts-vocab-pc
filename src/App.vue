@@ -75,7 +75,7 @@
 
           <div class="card">
             <div class="word-head">
-              <div class="word">{{ currentWord.word }}</div>
+              <div class="word clickable" title="点击发音" @click="playWord('us')">{{ currentWord.word }}</div>
               <button class="btn-fav" :class="{ on: isFav(currentWord.word) }" @click="toggleFav(currentWord.word)">
                 {{ isFav(currentWord.word) ? '★' : '☆' }}
               </button>
@@ -286,7 +286,7 @@
         <div class="modal">
           <button class="modal-close" @click="detailWord = null">✕</button>
           <div class="word-head">
-            <div class="word">{{ detailWord.word }}</div>
+            <div class="word clickable" title="点击发音" @click="playWord('us', detailWord.word)">{{ detailWord.word }}</div>
             <button class="btn-fav" :class="{ on: isFav(detailWord.word) }" @click="toggleFav(detailWord.word)">
               {{ isFav(detailWord.word) ? '★' : '☆' }}
             </button>
@@ -317,6 +317,7 @@
 
       <div v-if="tokenTip" class="token-tip" :style="tipStyle">
         <div class="tip-word">{{ tokenTip.clean }}</div>
+        <div v-if="tokenTip.trans" class="tip-trans">{{ tokenTip.trans }}</div>
         <div class="tip-actions">
           <button @click="playToken(tokenTip)">🔊 发音</button>
           <button @click="lookupToken(tokenTip)">查词</button>
@@ -647,12 +648,18 @@ export default {
     }
 
     // ---- 例句 token 交互 ----
+    function tokenTrans(clean) {
+      // 查全量词库取第一行中文释义
+      const found = allLexicon.value.find((w) => w.word.toLowerCase() === clean);
+      if (!found || !found.translation) return "";
+      return found.translation.split("\n")[0];
+    }
     function showTokenTip(tok, event) {
       if (!tok.clean) {
         tokenTip.value = null;
         return;
       }
-      tokenTip.value = tok;
+      tokenTip.value = { ...tok, trans: tokenTrans(tok.clean) };
       const rect = event.target.getBoundingClientRect();
       tipStyle.value = {
         left: rect.left + "px",

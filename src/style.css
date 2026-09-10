@@ -364,6 +364,16 @@ body {
   letter-spacing: -0.5px;
 }
 
+/* 主词可点击发音 */
+.word.clickable {
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.word.clickable:hover {
+  color: var(--primary);
+}
+
 .phonetic {
   font-size: 18px;
   color: var(--text-sub);
@@ -985,6 +995,14 @@ body {
   font-size: 15px;
   font-weight: 700;
   margin-bottom: 6px;
+}
+
+.tip-trans {
+  font-size: 12px;
+  color: #d1d5db;
+  line-height: 1.5;
+  max-width: 280px;
+  margin-bottom: 8px;
 }
 
 .tip-actions {
